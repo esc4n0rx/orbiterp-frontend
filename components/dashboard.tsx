@@ -27,7 +27,13 @@ import { useTheme } from "next-themes"
 import ViewCard from "@/components/view-card"
 import ViewRenderer from "@/components/view-renderer"
 import BottomNavbar from "@/components/bottom-navbar"
+import ModuleDetail from "@/components/modules/module-detail"
+import ModulesGrid from "@/components/modules/modules-grid"
+import ViewLoad from "@/components/view-load"
 import { Badge } from "@/components/ui/badge"
+import { useViewsStore } from "@/lib/stores/views-store"
+import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 
 interface DashboardProps {
   user: {
@@ -41,54 +47,15 @@ interface DashboardProps {
 interface Tab {
   id: string
   title: string
-  viewId: string
+  viewId?: string
+  alias?: string
   isActive: boolean
+  type: 'home' | 'view' | 'module'
+  moduleName?: string
 }
 
-const recentViews = [
-  {
-    id: "financial-report",
-    title: "Financial Report",
-    description: "Monthly financial overview",
-    lastAccessed: "2 hours ago",
-  },
-  {
-    id: "inventory-control",
-    title: "Inventory Control",
-    description: "Stock management system",
-    lastAccessed: "1 day ago",
-  },
-  {
-    id: "sales-dashboard",
-    title: "Sales Dashboard",
-    description: "Sales performance metrics",
-    lastAccessed: "3 days ago",
-  },
-]
-
-const suggestedViews = [
-  {
-    id: "purchase-orders",
-    title: "Purchase Orders",
-    description: "Manage procurement processes",
-    category: "Procurement",
-  },
-  {
-    id: "hr-management",
-    title: "HR Management",
-    description: "Employee and payroll management",
-    category: "Human Resources",
-  },
-  {
-    id: "production-planning",
-    title: "Production Planning",
-    description: "Manufacturing schedule and resources",
-    category: "Manufacturing",
-  },
-]
-
 const quickAccessViews = [
-  { id: "financial-report", title: "Financeiro", icon: BarChart3 },
+  { id: "v-usuario-registro", alias: "us01", title: "Cadastro", icon: Users },
   { id: "inventory-control", title: "Estoque", icon: Package },
   { id: "hr-management", title: "RH", icon: Users },
   { id: "sales-dashboard", title: "Vendas", icon: FileText },
@@ -98,10 +65,15 @@ const quickAccessViews = [
 
 export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [tabs, setTabs] = useState<Tab[]>([{ id: "home", title: "Home", viewId: "home", isActive: true }])
+  const [tabs, setTabs] = useState<Tab[]>([
+    { id: "home", title: "Home", isActive: true, type: 'home' }
+  ])
   const [currentTime, setCurrentTime] = useState(new Date())
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const { recentViews } = useViewsStore()
+  const { toast } = useToast()
+  const router = useRouter()
 
   useEffect(() => {
     setMounted(true)
@@ -117,14 +89,33 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
-      const viewId = searchQuery.toLowerCase().replace(/\s+/g, "-")
-      openNewTab(viewId, searchQuery)
+      const query = searchQuery.trim()
+      
+      // Determinar se é ID ou alias
+      const isAlias = !query.startsWith('v-') && query.length <= 10
+      
+      openNewTab(
+        query, 
+        isAlias ? `View ${query}` : query.replace(/-/g, ' '), 
+        'view',
+        isAlias ? query : undefined
+      )
       setSearchQuery("")
     }
   }
 
-  const openNewTab = (viewId: string, title: string) => {
-    const existingTab = tabs.find((tab) => tab.viewId === viewId)
+  const openNewTab = (
+    identifier: string, 
+    title: string, 
+    type: 'view' | 'module' = 'view',
+    alias?: string,
+    moduleName?: string
+  ) => {
+    const existingTab = tabs.find((tab) => 
+      (tab.viewId === identifier) || 
+      (tab.alias === alias && alias) ||
+      (tab.moduleName === moduleName && moduleName)
+    )
 
     if (existingTab) {
       // Switch to existing tab
@@ -139,8 +130,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       const newTab: Tab = {
         id: `tab-${Date.now()}`,
         title,
-        viewId,
+        viewId: type === 'view' ? identifier : undefined,
+        alias: alias,
+        moduleName: type === 'module' ? moduleName : undefined,
         isActive: true,
+        type
       }
 
       setTabs((prevTabs) => [...prevTabs.map((tab) => ({ ...tab, isActive: false })), newTab])
@@ -173,16 +167,44 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     setTabs(newTabs)
   }
 
-  const handleViewSelect = (viewId: string, title: string) => {
-    openNewTab(viewId, title)
+  const handleViewSelect = (viewId: string, title: string, alias?: string) => {
+    openNewTab(viewId, title, 'view', alias)
+  }
+
+ const handleModuleSelect = (module: any) => {
+    openNewTab(
+      `module-${module.name}`, 
+      module.title, 
+      'module',
+      undefined,
+      module.name
+    )
+  }
+
+   const handleBackToModules = () => {
+    switchTab("home")
   }
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
   }
 
+  const handleViewSuccess = (data: any) => {
+    toast({
+      title: "Sucesso",
+      description: data.message || "Operação realizada com sucesso",
+    })
+  }
+
+  const handleViewError = (error: string) => {
+    toast({
+      title: "Erro", 
+      description: error,
+      variant: "destructive",
+    })
+  }
+
   const activeTab = tabs.find((tab) => tab.isActive)
-  const currentView = activeTab?.viewId || "home"
 
   // Prevent hydration mismatch
   if (!mounted) {
@@ -267,7 +289,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 type="text"
-                placeholder="Digite o nome da view..."
+                placeholder="Digite ID ou alias da view (ex: v-usuario-registro ou us01)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 h-8 text-sm border focus:border-blue-500 bg-background"
@@ -283,7 +305,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                   key={view.id}
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleViewSelect(view.id, view.title)}
+                  onClick={() => handleViewSelect(view.id, view.title, view.alias)}
                   title={view.title}
                   className="hover:bg-background/80"
                 >
@@ -322,7 +344,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 onClick={() => switchTab(tab.id)}
                 className="flex items-center space-x-2 px-4 py-2 text-sm truncate"
               >
-                {tab.viewId === "home" ? (
+                {tab.type === "home" ? (
                   <Home className="h-3 w-3 flex-shrink-0" />
                 ) : (
                   <FileText className="h-3 w-3 flex-shrink-0" />
@@ -349,57 +371,88 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         </div>
       </div>
 
-      {/* Main Content with top padding for fixed header */}
-      <main className="pt-36 pb-16">
-        {currentView === "home" ? (
+       <main className="pt-36 pb-16">
+        {activeTab?.type === "home" ? (
           <div className="p-6">
             {/* Recent Views */}
-            <section className="mb-12">
-              <h2 className="text-2xl font-semibold mb-6 text-foreground flex items-center gap-2">
-                <Clock className="h-6 w-6" />
-                Minhas Views Recentes
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {recentViews.map((view) => (
-                  <ViewCard
-                    key={view.id}
-                    title={view.title}
-                    description={view.description}
-                    metadata={view.lastAccessed}
-                    onClick={() => handleViewSelect(view.id, view.title)}
-                    variant="recent"
-                  />
-                ))}
-              </div>
-            </section>
+            {recentViews.length > 0 && (
+              <section className="mb-12">
+                <h2 className="text-2xl font-semibold mb-6 text-foreground flex items-center gap-2">
+                  <Clock className="h-6 w-6" />
+                  Minhas Views Recentes
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {recentViews.slice(0, 6).map((view) => (
+                    <ViewCard
+                      key={view.id}
+                      title={view.title}
+                      description={view.description || 'View recente'}
+                      metadata={new Date(view.lastAccessed).toLocaleString()}
+                      onClick={() => handleViewSelect(view.id, view.title)}
+                      variant="recent"
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
-            {/* Suggested Views */}
+            {/* Modules */}
+           {/* Modules */}
             <section>
               <h2 className="text-2xl font-semibold mb-6 text-foreground flex items-center gap-2">
                 <Star className="h-6 w-6" />
-                Sugestões de Uso
+                Módulos Disponíveis
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {suggestedViews.map((view) => (
-                  <ViewCard
-                    key={view.id}
-                    title={view.title}
-                    description={view.description}
-                    metadata={view.category}
-                    onClick={() => handleViewSelect(view.id, view.title)}
-                    variant="suggested"
-                  />
-                ))}
-              </div>
+              <ModulesGrid 
+                onModuleSelect={handleModuleSelect}
+                onViewSelect={handleViewSelect}
+              />
             </section>
           </div>
+        ) : activeTab?.type === "view" ? (
+          <div className="p-6">
+            <ViewLoad
+              viewId={activeTab.viewId}
+              alias={activeTab.alias}
+              onSuccess={handleViewSuccess}
+              onError={handleViewError}
+              onBack={() => switchTab("home")}
+            />
+          </div>
+        ) : activeTab?.type === "module" && activeTab.moduleName ? (
+          <div className="p-6">
+            <ModuleDetail
+              moduleName={activeTab.moduleName}
+              onBack={handleBackToModules}
+              onViewSelect={handleViewSelect}
+            />
+          </div>
         ) : (
-          <ViewRenderer viewId={currentView} onOpenView={handleViewSelect} />
+          <div className="p-6">
+            <div className="text-center py-12">
+              <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Conteúdo não encontrado</h3>
+              <p className="text-muted-foreground">
+                O conteúdo desta aba não pôde ser carregado.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => switchTab("home")}
+                className="mt-4"
+              >
+                Voltar ao Início
+              </Button>
+            </div>
+          </div>
         )}
       </main>
 
-      {/* Bottom Navbar */}
-      <BottomNavbar currentView={activeTab?.title || "Home"} currentTime={currentTime} environment={user.environment} />
-    </div>
-  )
+     {/* Bottom Navbar */}
+     <BottomNavbar 
+       currentView={activeTab?.title || "Home"} 
+       currentTime={currentTime} 
+       environment={user.environment} 
+     />
+   </div>
+ )
 }
