@@ -1,35 +1,57 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import LoginScreen from "@/components/login-screen"
 import Dashboard from "@/components/dashboard"
 import { ThemeProvider } from "@/components/theme-provider"
+import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [currentUser, setCurrentUser] = useState<{
-    name: string
-    initials: string
-    environment: string
-  } | null>(null)
+  const { isAuthenticated, user, initializeAuth, logout } = useAuthStore()
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  useEffect(() => {
+    initializeAuth()
+    setIsInitialized(true)
+  }, [initializeAuth])
 
   const handleLogin = (userData: { name: string; initials: string; environment: string }) => {
-    setCurrentUser(userData)
-    setIsLoggedIn(true)
+    // Login já foi processado pelo store, apenas fechar a tela de login
+    console.log('Login successful:', userData)
   }
 
-  const handleLogout = () => {
-    setIsLoggedIn(false)
-    setCurrentUser(null)
+  const handleLogout = async () => {
+    await logout()
+  }
+
+  // Aguardar inicialização para evitar flash
+  if (!isInitialized) {
+    return (
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={true} disableTransitionOnChange={false}>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando...</p>
+          </div>
+        </div>
+      </ThemeProvider>
+    )
   }
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={true} disableTransitionOnChange={false}>
       <div className="min-h-screen bg-background transition-colors duration-300">
-        {!isLoggedIn ? (
+        {!isAuthenticated ? (
           <LoginScreen onLogin={handleLogin} />
         ) : (
-          <Dashboard user={currentUser!} onLogout={handleLogout} />
+          <Dashboard 
+            user={{
+              name: user?.nome || 'Usuário',
+              initials: user?.nome?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U',
+              environment: 'production' // Pode ser dinâmico posteriormente
+            }} 
+            onLogout={handleLogout} 
+          />
         )}
       </div>
     </ThemeProvider>

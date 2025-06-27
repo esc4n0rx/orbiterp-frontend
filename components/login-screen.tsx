@@ -1,39 +1,63 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2, AlertCircle } from "lucide-react"
+import { useAuthStore } from "@/lib/stores/auth-store"
 
 interface LoginScreenProps {
   onLogin: (userData: { name: string; initials: string; environment: string }) => void
 }
 
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [environment, setEnvironment] = useState("")
+  const { login, isLoading, error, clearError } = useAuthStore()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Limpar erro quando componente monta
+  useEffect(() => {
+    clearError()
+  }, [clearError])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (username && password && environment) {
-      // Generate initials from username
-      const initials = username
-        .split(" ")
-        .map((name) => name[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
+    
+    if (!email || !password) {
+      return
+    }
 
-      onLogin({
-        name: username,
-        initials: initials || username.slice(0, 2).toUpperCase(),
-        environment,
+    try {
+      await login({
+        user: email,
+        senha: password
       })
+
+      // Se chegou aqui, login foi bem-sucedido
+      // Buscar dados do usuário do store
+      const { user } = useAuthStore.getState()
+      
+      if (user) {
+        const initials = user.nome
+          .split(" ")
+          .map((name: string) => name[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2)
+
+        onLogin({
+          name: user.nome,
+          initials: initials || user.nome.slice(0, 2).toUpperCase(),
+          environment: "production" // Pode vir do backend posteriormente
+        })
+      }
+    } catch (error) {
+      // Erro já foi tratado no store
+      console.error('Login failed:', error)
     }
   }
 
@@ -55,62 +79,67 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-slate-600 dark:text-slate-300">
-                  User
+                <Label htmlFor="email" className="text-slate-600 dark:text-slate-300">
+                  Email
                 </Label>
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="Enter your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="Digite seu email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="h-11 border-slate-200 dark:border-slate-600 focus:border-blue-500 dark:bg-slate-700"
                   required
+                  disabled={isLoading}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-slate-600 dark:text-slate-300">
-                  Password
+                  Senha
                 </Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="Digite sua senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-11 border-slate-200 dark:border-slate-600 focus:border-blue-500 dark:bg-slate-700"
                   required
+                  disabled={isLoading}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="environment" className="text-slate-600 dark:text-slate-300">
-                  Environment
-                </Label>
-                <Select value={environment} onValueChange={setEnvironment} required>
-                  <SelectTrigger className="h-11 border-slate-200 dark:border-slate-600 focus:border-blue-500 dark:bg-slate-700">
-                    <SelectValue placeholder="Select environment" />
-                  </SelectTrigger>
-                  <SelectContent className="dark:bg-slate-800 dark:border-slate-600">
-                    <SelectItem value="production">Production</SelectItem>
-                    <SelectItem value="staging">Staging</SelectItem>
-                    <SelectItem value="development">Development</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button type="submit" className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium">
-                Log On
+              <Button 
+                type="submit" 
+                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                disabled={isLoading || !email || !password}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  'Entrar'
+                )}
               </Button>
 
               <div className="text-center">
                 <button
                   type="button"
                   className="text-sm text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                  disabled={isLoading}
                 >
-                  Change Password
+                  Esqueci minha senha
                 </button>
               </div>
             </form>
