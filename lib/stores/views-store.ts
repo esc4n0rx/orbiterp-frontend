@@ -16,6 +16,7 @@ interface ViewsState {
   error: string | null
   fetchView: (viewId: string) => Promise<ViewDefinition | null>
   fetchViewByAlias: (alias: string) => Promise<ViewDefinition | null>
+  findView: (identifier: string) => Promise<ViewDefinition | null>
   addToRecentViews: (view: { id: string; title: string; description?: string; module?: string }) => void
   clearError: () => void
 }
@@ -66,6 +67,45 @@ export const useViewsStore = create<ViewsState>()(
         
         try {
           const response = await viewsService.getViewByAlias(alias)
+          
+          if (response.success) {
+            const view = response.data.view
+            set((state) => ({
+              views: { ...state.views, [view.id]: view },
+              isLoading: false,
+              error: null
+            }))
+            return view
+          } else {
+            throw new Error('View não encontrada')
+          }
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'Erro ao carregar view'
+          })
+          return null
+        }
+      },
+
+      findView: async (identifier: string) => {
+        const { views } = get()
+        
+        // Primeiro verifica se já existe no cache (por ID)
+        if (views[identifier]) {
+          return views[identifier]
+        }
+
+        // Verifica se existe no cache por alias
+        const cachedView = Object.values(views).find(view => view.alias === identifier)
+        if (cachedView) {
+          return cachedView
+        }
+
+        set({ isLoading: true, error: null })
+        
+        try {
+          const response = await viewsService.findView(identifier)
           
           if (response.success) {
             const view = response.data.view

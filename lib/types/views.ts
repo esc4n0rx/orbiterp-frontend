@@ -1,10 +1,12 @@
 export interface ViewField {
   label: string
   name: string
-  type: 'text' | 'email' | 'password' | 'number' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'file' | 'date' | 'time' | 'datetime-local'
+  type: 'text' | 'email' | 'password' | 'number' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'file' | 'date' | 'time' | 'datetime-local' | 'json'
   required?: boolean
   placeholder?: string
   value?: any
+  default?: any
+  help?: string
   options?: Array<{ label: string; value: any }>
   validation?: {
     pattern?: string
@@ -18,10 +20,13 @@ export interface ViewField {
   mask?: string
   readonly?: boolean
   hidden?: boolean
+  advanced?: boolean
   className?: string
   grid?: {
     cols?: number
     span?: number
+    xs?: number
+    md?: number
   }
 }
 
@@ -75,6 +80,7 @@ export interface ViewResponse {
   data: {
     view: ViewDefinition
   }
+  message?: string
 }
 
 export interface ViewsListResponse {

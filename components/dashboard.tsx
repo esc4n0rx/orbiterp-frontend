@@ -33,7 +33,6 @@ import ViewLoad from "@/components/view-load"
 import { Badge } from "@/components/ui/badge"
 import { useViewsStore } from "@/lib/stores/views-store"
 import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
 
 interface DashboardProps {
   user: {
@@ -49,6 +48,7 @@ interface Tab {
   title: string
   viewId?: string
   alias?: string
+  identifier?: string // Para armazenar o identificador original
   isActive: boolean
   type: 'home' | 'view' | 'module'
   moduleName?: string
@@ -73,7 +73,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [mounted, setMounted] = useState(false)
   const { recentViews } = useViewsStore()
   const { toast } = useToast()
-  const router = useRouter()
 
   useEffect(() => {
     setMounted(true)
@@ -86,22 +85,45 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     return () => clearInterval(timer)
   }, [])
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (searchQuery.trim()) {
-      const query = searchQuery.trim()
+    if (!searchQuery.trim()) return
+
+    const query = searchQuery.trim()
+    console.log('Buscando:', query)
+
+    try {
+      // Usar o método findView que tenta tanto ID quanto alias
+      const { findView } = useViewsStore.getState()
+      const view = await findView(query)
       
-      // Determinar se é ID ou alias
-      const isAlias = !query.startsWith('v-') && query.length <= 10
-      
-      openNewTab(
-        query, 
-        isAlias ? `View ${query}` : query.replace(/-/g, ' '), 
-        'view',
-        isAlias ? query : undefined
-      )
-      setSearchQuery("")
+      if (view) {
+        console.log('View encontrada:', view)
+        openNewTab(
+          query,
+          view.title,
+          'view',
+          view.alias,
+          undefined,
+          query // identifier original
+        )
+        toast({
+          title: "Sucesso",
+          description: `View "${view.title}" carregada com sucesso`,
+        })
+      } else {
+        throw new Error('View não encontrada')
+      }
+    } catch (error: any) {
+      console.error('Erro na busca:', error)
+      toast({
+        title: "Erro",
+        description: error.message || 'View não encontrada. Verifique o ID ou alias.',
+        variant: "destructive",
+      })
     }
+    
+    setSearchQuery("")
   }
 
   const openNewTab = (
@@ -109,9 +131,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     title: string, 
     type: 'view' | 'module' = 'view',
     alias?: string,
-    moduleName?: string
+    moduleName?: string,
+    originalIdentifier?: string
   ) => {
     const existingTab = tabs.find((tab) => 
+      (tab.identifier === originalIdentifier) ||
       (tab.viewId === identifier) || 
       (tab.alias === alias && alias) ||
       (tab.moduleName === moduleName && moduleName)
@@ -132,6 +156,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         title,
         viewId: type === 'view' ? identifier : undefined,
         alias: alias,
+        identifier: originalIdentifier || identifier,
         moduleName: type === 'module' ? moduleName : undefined,
         isActive: true,
         type
@@ -168,10 +193,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   }
 
   const handleViewSelect = (viewId: string, title: string, alias?: string) => {
-    openNewTab(viewId, title, 'view', alias)
+    openNewTab(viewId, title, 'view', alias, undefined, viewId)
   }
 
- const handleModuleSelect = (module: any) => {
+  const handleModuleSelect = (module: any) => {
     openNewTab(
       `module-${module.name}`, 
       module.title, 
@@ -181,7 +206,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     )
   }
 
-   const handleBackToModules = () => {
+  const handleBackToModules = () => {
     switchTab("home")
   }
 
@@ -371,7 +396,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         </div>
       </div>
 
-       <main className="pt-36 pb-16">
+      <main className="pt-36 pb-16">
         {activeTab?.type === "home" ? (
           <div className="p-6">
             {/* Recent Views */}
@@ -397,7 +422,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             )}
 
             {/* Modules */}
-           {/* Modules */}
             <section>
               <h2 className="text-2xl font-semibold mb-6 text-foreground flex items-center gap-2">
                 <Star className="h-6 w-6" />
@@ -412,8 +436,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         ) : activeTab?.type === "view" ? (
           <div className="p-6">
             <ViewLoad
-              viewId={activeTab.viewId}
-              alias={activeTab.alias}
+              identifier={activeTab.identifier}
               onSuccess={handleViewSuccess}
               onError={handleViewError}
               onBack={() => switchTab("home")}
@@ -447,12 +470,12 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         )}
       </main>
 
-     {/* Bottom Navbar */}
-     <BottomNavbar 
-       currentView={activeTab?.title || "Home"} 
-       currentTime={currentTime} 
-       environment={user.environment} 
-     />
-   </div>
- )
+      {/* Bottom Navbar */}
+      <BottomNavbar 
+        currentView={activeTab?.title || "Home"} 
+        currentTime={currentTime} 
+        environment={user.environment} 
+      />
+    </div>
+  )
 }

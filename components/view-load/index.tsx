@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 interface ViewLoadProps {
   viewId?: string
   alias?: string
+  identifier?: string // Novo: aceita qualquer identificador
   className?: string
   onSuccess?: (data: any) => void
   onError?: (error: string) => void
@@ -26,12 +27,13 @@ interface ViewLoadProps {
 export default function ViewLoad({ 
   viewId, 
   alias, 
+  identifier,
   className,
   onSuccess,
   onError,
   onBack
 }: ViewLoadProps) {
-  const { fetchView, fetchViewByAlias, addToRecentViews, isLoading, error } = useViewsStore()
+  const { fetchView, fetchViewByAlias, findView, addToRecentViews, isLoading, error } = useViewsStore()
   const [view, setView] = useState<ViewDefinition | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
 
@@ -42,12 +44,16 @@ export default function ViewLoad({
       try {
         let loadedView: ViewDefinition | null = null
         
-        if (viewId) {
+        if (identifier) {
+          // Usa o método inteligente que tenta ID e alias
+          console.log('Carregando view com identifier:', identifier)
+          loadedView = await findView(identifier)
+        } else if (viewId) {
           loadedView = await fetchView(viewId)
         } else if (alias) {
           loadedView = await fetchViewByAlias(alias)
         } else {
-          setLocalError('ViewId ou alias deve ser fornecido')
+          setLocalError('Identificador da view deve ser fornecido')
           return
         }
 
@@ -65,10 +71,10 @@ export default function ViewLoad({
       }
     }
 
-    if ((viewId || alias) && !view) {
+    if ((identifier || viewId || alias) && !view) {
       loadView()
     }
-  }, [viewId, alias, fetchView, fetchViewByAlias, addToRecentViews, view])
+  }, [identifier, viewId, alias, fetchView, fetchViewByAlias, findView, addToRecentViews, view])
 
   const handleSuccess = (data: any) => {
     setLocalError(null)
@@ -113,12 +119,10 @@ export default function ViewLoad({
         </Alert>
         
         {onBack && (
-          <button
-            onClick={onBack}
-            className="text-sm text-blue-600 hover:text-blue-700 underline"
-          >
-            ← Voltar
-          </button>
+          <Button variant="outline" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
         )}
       </div>
     )
@@ -134,12 +138,10 @@ export default function ViewLoad({
         </p>
         
         {onBack && (
-          <button
-            onClick={onBack}
-            className="mt-4 text-sm text-blue-600 hover:text-blue-700 underline"
-          >
-            ← Voltar
-          </button>
+          <Button variant="outline" onClick={onBack} className="mt-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
         )}
       </div>
     )
@@ -203,7 +205,7 @@ export default function ViewLoad({
               onSuccess={handleSuccess}
               onError={handleError}
             >
-              {({ formData, errors, isSubmitting, handleFieldChange, handleSubmit, handleFieldEvent }) => (
+              {({ formData, errors, isSubmitting, submitSuccess, submitMessage, handleFieldChange, handleSubmit, handleFieldEvent, resetForm }) => (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Fields */}
                   <div className={gridClass}>
@@ -227,6 +229,7 @@ export default function ViewLoad({
                           key={index}
                           action={action}
                           isLoading={isSubmitting && action.type === 'submit'}
+                          onClick={action.type === 'reset' ? resetForm : undefined}
                         />
                       ))}
                     </div>

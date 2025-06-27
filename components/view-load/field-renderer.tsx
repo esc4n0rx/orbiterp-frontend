@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { cn } from "@/lib/utils"
+import JsonField from "./json-field"
 import type { ViewField } from "@/lib/types/views"
 
 interface FieldRendererProps {
@@ -112,6 +113,22 @@ export default function FieldRenderer({
             className={cn(error && "border-red-500", field.className)}
             minLength={field.validation?.minLength}
             maxLength={field.validation?.maxLength}
+          />
+        )
+      
+      case 'json':
+        return (
+          <JsonField
+            id={fieldId}
+            label={field.label}
+            value={value}
+            onChange={handleChange}
+            required={field.required}
+            readonly={field.readonly}
+            defaultValue={field.value || field.default}
+            help={field.help}
+            className={field.className}
+            error={error}
           />
         )
       
@@ -226,12 +243,12 @@ export default function FieldRenderer({
     }
   }
 
-  // Para checkbox, não mostrar label separado pois já está integrado
-  if (field.type === 'checkbox') {
+  // Para checkbox e json, não mostrar label separado pois já está integrado
+  if (field.type === 'checkbox' || field.type === 'json') {
     return (
       <div className={gridClasses}>
         {renderField()}
-        {error && (
+        {field.type === 'checkbox' && error && (
           <p className="text-sm text-red-500 mt-1">{error}</p>
         )}
       </div>

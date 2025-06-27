@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from "react"
 import { viewsService } from "@/lib/services/views-service"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CheckCircle, AlertCircle } from "lucide-react"
 import type { ViewField } from "@/lib/types/views"
 
 interface FormHandlerProps {
@@ -15,9 +17,12 @@ interface FormHandlerProps {
     formData: Record<string, any>
     errors: Record<string, string>
     isSubmitting: boolean
+    submitSuccess: boolean
+    submitMessage: string | null
     handleFieldChange: (name: string, value: any) => void
     handleSubmit: (e: React.FormEvent) => void
     handleFieldEvent: (fieldName: string, value: any) => void
+    resetForm: () => void
   }) => React.ReactNode
 }
 
@@ -35,6 +40,8 @@ export default function FormHandler({
     fields.forEach(field => {
       if (field.value !== undefined) {
         initial[field.name] = field.value
+      } else if (field.default !== undefined) {
+        initial[field.name] = field.default
       }
     })
     return initial
@@ -42,6 +49,21 @@ export default function FormHandler({
   
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null)
+
+  const resetForm = useCallback(() => {
+    const initial: Record<string, any> = {}
+    fields.forEach(field => {
+      if (field.default !== undefined) {
+        initial[field.name] = field.default
+      }
+    })
+    setFormData(initial)
+    setErrors({})
+    setSubmitSuccess(false)
+    setSubmitMessage(null)
+  }, [fields])
 
   const validateField = useCallback(async (fieldName: string, value: any) => {
     const field = fields.find(f => f.name === fieldName)
@@ -64,9 +86,8 @@ export default function FormHandler({
     }
 
     // Validação remota
-    if (!error && apiValidation && field.name === 'email' || field.name === 'username' || field.name === 'cpf') {
+    if (!error && apiValidation && (field.name === 'email' || field.name === 'username' || field.name === 'cpf')) {
       try {
-        if (!apiValidation) throw new Error('Endpoint de validação não configurado')
         const response = await viewsService.validateField(apiValidation, {
           [fieldName]: value
         })
@@ -96,6 +117,12 @@ export default function FormHandler({
       [name]: value
     }))
 
+    // Limpar mensagens de sucesso quando usuário editar
+    if (submitSuccess) {
+      setSubmitSuccess(false)
+      setSubmitMessage(null)
+    }
+
     // Limpar erro quando usuário começar a digitar
     if (errors[name]) {
       setErrors(prev => ({
@@ -110,7 +137,7 @@ export default function FormHandler({
     }, 500)
 
     return () => clearTimeout(timeoutId)
-  }, [errors, validateField])
+  }, [errors, validateField, submitSuccess])
 
   const handleFieldEvent = useCallback(async (fieldName: string, value: any) => {
     const field = fields.find(f => f.name === fieldName)
@@ -136,12 +163,16 @@ export default function FormHandler({
     e.preventDefault()
     
     if (!apiSubmit) {
-      onError?.('Endpoint de submissão não configurado')
+      const errorMsg = 'Endpoint de submissão não configurado'
+      setSubmitMessage(errorMsg)
+      onError?.(errorMsg)
       return
     }
 
     setIsSubmitting(true)
     setErrors({})
+    setSubmitSuccess(false)
+    setSubmitMessage(null)
 
     try {
       // Validar todos os campos
@@ -155,7 +186,7 @@ export default function FormHandler({
 
       if (Object.keys(fieldErrors).length > 0) {
         setErrors(fieldErrors)
-        setIsSubmitting(false)
+        setSubmitMessage('Corrija os erros antes de continuar')
         return
       }
 
@@ -163,11 +194,20 @@ export default function FormHandler({
       const response = await viewsService.submitForm(apiSubmit, formData, method)
       
       if (response.success) {
-        onSuccess?.(response.data)
+        setSubmitSuccess(true)
+        setSubmitMessage(response.message || 'Formulário enviado com sucesso!')
+        onSuccess?.(response)
+        
+        // Reset form after success
+        setTimeout(() => {
+          resetForm()
+        }, 2000)
       } else {
         throw new Error(response.message || 'Erro ao enviar formulário')
       }
     } catch (error: any) {
+      setSubmitSuccess(false)
+      setSubmitMessage(error.message || 'Erro ao enviar formulário')
       onError?.(error.message || 'Erro ao enviar formulário')
     } finally {
       setIsSubmitting(false)
@@ -175,15 +215,32 @@ export default function FormHandler({
   }
 
   return (
-    <>
+    <div className="space-y-4">
+      {/* Feedback de sucesso/erro */}
+      {submitMessage && (
+        <Alert variant={submitSuccess ? "default" : "destructive"}>
+          {submitSuccess ? (
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          ) : (
+            <AlertCircle className="h-4 w-4" />
+          )}
+          <AlertDescription className="font-medium">
+            {submitMessage}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {children({
         formData,
         errors,
         isSubmitting,
+        submitSuccess,
+        submitMessage,
         handleFieldChange,
         handleSubmit,
-        handleFieldEvent
+        handleFieldEvent,
+        resetForm
       })}
-    </>
+    </div>
   )
 }
