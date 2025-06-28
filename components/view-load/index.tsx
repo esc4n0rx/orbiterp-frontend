@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, ArrowLeft, FileText } from "lucide-react"
+import { AlertCircle, ArrowLeft, FileText, Zap } from "lucide-react"
 import FieldRenderer from "./field-renderer"
 import ActionRenderer from "./action-renderer"
 import FormHandler from "./form-handler"
+import WizardRenderer from "./wizard-renderer"
 import { cn } from "@/lib/utils"
 import type { ViewDefinition } from "@/lib/types/views"
 import { Button } from "@/components/ui/button"
@@ -88,6 +89,32 @@ export default function ViewLoad({
 
   const currentError = localError || error
 
+  const getViewTypeIcon = (type: string) => {
+    switch (type) {
+      case 'wizard':
+        return <Zap className="h-5 w-5" />
+      case 'form':
+        return <FileText className="h-5 w-5" />
+      default:
+        return <FileText className="h-5 w-5" />
+    }
+  }
+
+  const getViewTypeBadge = (type: string) => {
+    switch (type) {
+      case 'wizard':
+        return <Badge variant="default" className="bg-purple-600">Wizard</Badge>
+      case 'form':
+        return <Badge variant="secondary">Formulário</Badge>
+      case 'list':
+        return <Badge variant="outline">Lista</Badge>
+      case 'dashboard':
+        return <Badge variant="default" className="bg-blue-600">Dashboard</Badge>
+      default:
+        return <Badge variant="secondary">{type}</Badge>
+    }
+  }
+
   if (isLoading) {
     return (
       <div className={cn("space-y-6", className)}>
@@ -156,7 +183,9 @@ export default function ViewLoad({
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
+            {getViewTypeIcon(view.type)}
             <h1 className="text-2xl font-bold">{view.title}</h1>
+            {getViewTypeBadge(view.type)}
             {view.alias && (
               <Badge variant="outline" className="text-xs">
                 {view.alias}
@@ -172,6 +201,12 @@ export default function ViewLoad({
           {view.metadata?.description && (
             <p className="text-muted-foreground">{view.metadata.description}</p>
           )}
+          
+          {view.metadata?.estimatedTime && (
+            <p className="text-xs text-muted-foreground">
+              Tempo estimado: {view.metadata.estimatedTime}
+            </p>
+          )}
         </div>
 
         {onBack && (
@@ -182,21 +217,27 @@ export default function ViewLoad({
         )}
       </div>
 
-      {/* Content */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            {view.title}
-            {view.code && (
-              <Badge variant="outline" className="text-xs font-mono">
-                {view.code}
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {view.type === 'form' ? (
+      {/* Content based on view type */}
+      {view.type === 'wizard' ? (
+        <WizardRenderer
+          view={view}
+          onSuccess={handleSuccess}
+          onError={handleError}
+        />
+      ) : view.type === 'form' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {view.title}
+              {view.code && (
+                <Badge variant="outline" className="text-xs font-mono">
+                  {view.code}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <FormHandler
               fields={view.fields}
               apiSubmit={view.apiSubmit}
@@ -222,7 +263,7 @@ export default function ViewLoad({
                   </div>
 
                   {/* Actions */}
-                  {view.actions.length > 0 && (
+                  {view.actions && view.actions.length > 0 && (
                     <div className="flex flex-wrap gap-3 pt-4 border-t">
                       {view.actions.map((action, index) => (
                         <ActionRenderer
@@ -237,15 +278,27 @@ export default function ViewLoad({
                 </form>
               )}
             </FormHandler>
-          ) : (
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="p-6">
             <div className="text-center py-8">
+              <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Tipo de view não suportado</h3>
               <p className="text-muted-foreground">
-                Tipo de view "{view.type}" ainda não implementado
+                O tipo de view "{view.type}" ainda não foi implementado.
               </p>
+              {onBack && (
+                <Button variant="outline" onClick={onBack} className="mt-4">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Voltar
+                </Button>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

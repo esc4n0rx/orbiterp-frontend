@@ -161,5 +161,42 @@ export const viewsService = {
         message: error.message || 'Erro ao buscar CEP'
       }
     }
+  },
+
+  // Validações específicas para campos
+  async validateEmail(email: string) {
+    try {
+      const response = await api.post('/api/validate/email', { email })
+      return response.data
+    } catch (error: any) {
+      throw {
+        success: false,
+        message: error.response?.data?.message || 'Erro na validação de email'
+      }
+    }
+  },
+
+  async validateUsername(username: string) {
+    try {
+      const response = await api.post('/api/validate/username', { username })
+      return response.data
+    } catch (error: any) {
+      throw {
+        success: false,
+        message: error.response?.data?.message || 'Erro na validação de username'
+      }
+    }
+  },
+
+  async validateCPF(cpf: string) {
+    try {
+      const response = await api.post('/api/validate/cpf', { cpf })
+      return response.data
+    } catch (error: any) {
+      throw {
+        success: false,
+        message: error.response?.data?.message || 'Erro na validação de CPF'
+      }
+    }
   }
 }

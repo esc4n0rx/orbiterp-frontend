@@ -24,6 +24,7 @@ const getActionIcon = (iconName?: string) => {
     plus: Plus,
     edit: Edit,
     trash: Trash2,
+    'trash-2': Trash2,
     download: Download,
     upload: Upload,
     settings: Settings,
@@ -70,6 +71,8 @@ export default function ActionRenderer({
   const handleClick = () => {
     if (action.disabled || isLoading) return
     
+    console.log('ActionRenderer handleClick:', action.type, action)
+    
     if (action.type === 'link' && action.href) {
       if (action.target === '_blank') {
         window.open(action.href, '_blank')
@@ -84,23 +87,26 @@ export default function ActionRenderer({
     }
   }
 
-  const buttonProps = {
-  type: action.type === 'submit' ? 'submit' as const : 'button' as const,
-   variant,
-   size: action.size || 'default' as const,
-   disabled: action.disabled || isLoading,
-   onClick: action.type !== 'submit' ? handleClick : undefined,
-   className: cn(action.className)
- }
+  // Para ações do tipo fetch ou button, sempre use type="button"
+  const buttonType: "submit" | "button" | "reset" = (action.type === 'submit') ? 'submit' : 'button'
 
- return (
-   <Button {...buttonProps}>
-     {isLoading && action.type === 'submit' ? (
-       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-     ) : (
-       Icon && <Icon className="h-4 w-4 mr-2" />
-     )}
-     {action.label}
-   </Button>
- )
+  const buttonProps = {
+    type: buttonType,
+    variant,
+    size: action.size || 'default',
+    disabled: action.disabled || isLoading,
+    onClick: buttonType === 'button' ? handleClick : undefined,
+    className: cn(action.className)
+  }
+
+  return (
+    <Button {...buttonProps}>
+      {isLoading && (action.type === 'submit' || action.type === 'fetch') ? (
+        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+      ) : (
+        Icon && <Icon className="h-4 w-4 mr-2" />
+      )}
+      {isLoading && action.loadingText ? action.loadingText : action.label}
+    </Button>
+  )
 }
