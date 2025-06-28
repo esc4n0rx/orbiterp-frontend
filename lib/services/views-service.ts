@@ -1,5 +1,5 @@
 import api from './api'
-import type { ViewResponse, ViewsListResponse } from '@/lib/types/views'
+import type { ViewResponse, ViewsListResponse, UserSearchResponse } from '@/lib/types/views'
 
 export const viewsService = {
   async getViews(params?: {
@@ -103,6 +103,19 @@ export const viewsService = {
       throw {
         success: false,
         message: error.response?.data?.message || 'Erro ao enviar formulário'
+      }
+    }
+  },
+
+  // Método específico para busca de usuários
+  async searchUsers(searchParams: { nome?: string; cpf?: string }): Promise<UserSearchResponse> {
+    try {
+      const response = await api.post<UserSearchResponse>('/api/users/search', searchParams)
+      return response.data
+    } catch (error: any) {
+      throw {
+        success: false,
+        message: error.response?.data?.message || 'Erro na busca de usuários'
       }
     }
   },

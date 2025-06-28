@@ -186,6 +186,26 @@ export interface SearchResult {
   [key: string]: any
 }
 
+// Nova interface para resposta de busca de usuários
+export interface UserSearchResponse {
+  success: boolean
+  data: {
+    users: Array<{
+      id: number
+      nome: string
+      email: string
+      username: string
+      cpf: string
+      role: string
+      status: string
+      statusLogin?: string
+      createdAt: string
+      [key: string]: any
+    }>
+    total: number
+  }
+}
+
 export interface ViewResponse {
   success: boolean
   data: {

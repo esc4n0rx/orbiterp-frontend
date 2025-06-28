@@ -88,30 +88,44 @@ export default function WizardRenderer({ view, onSuccess, onError }: WizardRende
       return
     }
 
-    console.log('Executando busca com dados:', dataToSearch)
+    console.log('Executando busca com dados originais:', dataToSearch)
     setSearchError(null)
     setIsSearching(true)
     
     try {
-      // Filtrar campos vazios para enviar apenas os preenchidos
-      const filteredData = Object.entries(dataToSearch).reduce((acc, [key, value]) => {
-        if (value && value.toString().trim()) {
-          acc[key] = value
-        }
-        return acc
-      }, {} as Record<string, any>)
-
-      console.log('Dados filtrados para busca:', filteredData)
+      // Mapear campos de busca para o formato esperado pela API
+      const apiData: Record<string, any> = {}
       
-      const response = await viewsService.submitForm(view.apiSearch, filteredData, 'POST')
+      if (dataToSearch.searchNome && dataToSearch.searchNome.trim()) {
+        apiData.nome = dataToSearch.searchNome.trim()
+      }
+      
+      if (dataToSearch.searchCpf && dataToSearch.searchCpf.trim()) {
+        // Remover máscara do CPF se houver
+        apiData.cpf = dataToSearch.searchCpf.replace(/\D/g, '')
+      }
+
+      console.log('Dados mapeados para API:', apiData)
+      
+      const response = await viewsService.submitForm(view.apiSearch, apiData, 'POST')
       console.log('Resposta da busca:', response)
       
-      if (response.success && response.data?.results) {
-        setSearchResults(response.data.results)
-        console.log('Resultados encontrados:', response.data.results.length)
+      if (response.success && response.data?.users) {
+        const mappedResults = response.data.users.map((user: any) => ({
+          id: user.id.toString(),
+          title: user.nome,
+          subtitle: user.email,
+          description: user.cpf,
+          badge: user.status,
+          meta: user.role,
+          ...user
+        }))
+        
+        setSearchResults(mappedResults)
+        console.log('Resultados mapeados:', mappedResults)
       } else {
         setSearchResults([])
-        console.log('Nenhum resultado encontrado')
+        console.log('Nenhum resultado encontrado ou formato inesperado')
       }
     } catch (error: any) {
       console.error('Erro na busca:', error)
