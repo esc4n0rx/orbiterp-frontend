@@ -23,11 +23,18 @@ export default function ModulesGrid({ onModuleSelect, onViewSelect }: ModulesGri
   }, [modules.length, isLoading, fetchModules])
 
   const handleModuleClick = (module: Module) => {
+    console.log('ModulesGrid: módulo clicado:', module)
+    
     if (onModuleSelect) {
+      console.log('ModulesGrid: chamando onModuleSelect')
       onModuleSelect(module)
-    } else if (onViewSelect) {
-      // Se não há handler específico para módulo, pode abrir uma view padrão do módulo
-      onViewSelect(`v-${module.name}-dashboard`, `${module.title} - Dashboard`)
+    } else {
+      console.warn('ModulesGrid: onModuleSelect não definido')
+      
+      // Fallback: se não há handler específico para módulo, abrir view padrão
+      if (onViewSelect) {
+        onViewSelect(`v-${module.name}-dashboard`, `${module.title} - Dashboard`)
+      }
     }
   }
 

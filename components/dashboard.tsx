@@ -135,6 +135,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     moduleName?: string,
     originalIdentifier?: string
   ) => {
+    console.log('Dashboard: openNewTab chamado:', { identifier, title, type, alias, moduleName, originalIdentifier })
+    
     const existingTab = tabs.find((tab) => 
       (tab.identifier === originalIdentifier) ||
       (tab.viewId === identifier) || 
@@ -143,6 +145,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     )
 
     if (existingTab) {
+      console.log('Dashboard: aba existente encontrada, ativando:', existingTab.id)
       setTabs(
         tabs.map((tab) => ({
           ...tab,
@@ -162,11 +165,14 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         type
       }
 
+      console.log('Dashboard: criando nova aba:', newTab)
+
       setTabs((prevTabs) => [...prevTabs.map((tab) => ({ ...tab, isActive: false })), newTab])
     }
   }
 
   const switchTab = (tabId: string) => {
+    console.log('Dashboard: switching to tab:', tabId)
     setTabs(
       tabs.map((tab) => ({
         ...tab,
@@ -191,9 +197,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     setTabs(newTabs)
   }
 
-  // **FIX: Melhorar handleViewSelect para usar o identificador correto**
   const handleViewSelect = (viewId: string, title: string, alias?: string) => {
-    console.log('handleViewSelect chamado:', { viewId, title, alias })
+    console.log('Dashboard: handleViewSelect chamado:', { viewId, title, alias })
     
     // Usar alias se disponível, senão usar viewId
     const identifier = alias || viewId
@@ -201,13 +206,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     openNewTab(identifier, title, 'view', alias, undefined, identifier)
   }
 
-  // **FIX: Corrigir handleModuleSelect para abrir detalhes do módulo**
+  // **FIX: Corrigir handleModuleSelect**
   const handleModuleSelect = (module: any) => {
-    console.log('handleModuleSelect chamado:', module)
+    console.log('Dashboard: handleModuleSelect chamado:', module)
     
     openNewTab(
-      `module-${module.name}`, 
-      `${module.title} - Módulo`, 
+      module.name, 
+      `${module.title}`, 
       'module',
       undefined,
       module.name
@@ -378,6 +383,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               >
                 {tab.type === "home" ? (
                   <Home className="h-3 w-3 flex-shrink-0" />
+                ) : tab.type === "module" ? (
+                  <Package className="h-3 w-3 flex-shrink-0" />
                 ) : (
                   <FileText className="h-3 w-3 flex-shrink-0" />
                 )}
