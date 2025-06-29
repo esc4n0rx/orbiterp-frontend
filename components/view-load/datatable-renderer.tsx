@@ -347,11 +347,23 @@ export default function DatatableRenderer({ view, onSuccess, onError }: Datatabl
                       <SelectValue placeholder={filter.placeholder} />
                     </SelectTrigger>
                     <SelectContent>
-                      {filter.options?.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
+                      {/* **FIX: Adicionar opção vazia explícita** */}
+                      <SelectItem value="">
+                        {filter.placeholder || 'Todos'}
+                      </SelectItem>
+                      {/* **FIX: Validar se options existem e se cada option tem value válido** */}
+                      {filter.options?.map((option) => {
+                        // Garantir que o value não seja vazio ou null
+                        const optionValue = option.value != null && option.value !== '' 
+                          ? String(option.value) 
+                          : `option-${Math.random().toString(36).substr(2, 9)}`
+                        
+                        return (
+                          <SelectItem key={optionValue} value={optionValue}>
+                            {option.label}
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 ) : (
@@ -488,7 +500,8 @@ export default function DatatableRenderer({ view, onSuccess, onError }: Datatabl
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {view.pagination.pageSizeOptions?.map((size) => (
+                {/* **FIX: Garantir que pageSizeOptions existam e tenham valores válidos** */}
+                {(view.pagination.pageSizeOptions || [10, 25, 50, 100]).map((size) => (
                   <SelectItem key={size} value={String(size)}>
                     {size}
                   </SelectItem>

@@ -5,6 +5,7 @@ import LoginScreen from "@/components/login-screen"
 import Dashboard from "@/components/dashboard"
 import { ThemeProvider } from "@/components/theme-provider"
 import { useAuthStore } from "@/lib/stores/auth-store"
+import { Toaster } from "@/components/ui/toaster"
 
 export default function Home() {
   const { isAuthenticated, user, initializeAuth, logout } = useAuthStore()
@@ -27,7 +28,12 @@ export default function Home() {
   // Aguardar inicialização para evitar flash
   if (!isInitialized) {
     return (
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={true} disableTransitionOnChange={false}>
+      <ThemeProvider 
+        attribute="class" 
+        defaultTheme="system" 
+        enableSystem={true} 
+        disableTransitionOnChange={false}
+      >
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center">
             <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -39,7 +45,12 @@ export default function Home() {
   }
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={true} disableTransitionOnChange={false}>
+    <ThemeProvider 
+      attribute="class" 
+      defaultTheme="system" 
+      enableSystem={true} 
+      disableTransitionOnChange={false}
+    >
       <div className="min-h-screen bg-background transition-colors duration-300">
         {!isAuthenticated ? (
           <LoginScreen onLogin={handleLogin} />
@@ -54,6 +65,9 @@ export default function Home() {
           />
         )}
       </div>
+      
+      {/* Adicionar Toaster para notificações */}
+      <Toaster />
     </ThemeProvider>
   )
 }
