@@ -55,7 +55,7 @@ export interface ViewField {
 }
 
 export interface ViewAction {
-  type: 'submit' | 'button' | 'link' | 'reset' | 'fetch' | 'delete'
+  type: 'submit' | 'button' | 'link' | 'reset' | 'fetch' | 'delete' | 'dropdown'
   label: string
   icon?: string
   color?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger'
@@ -70,6 +70,11 @@ export interface ViewAction {
     navigate?: string
     nextStep?: string
     confirm?: ConfirmationConfig
+    modal?: string
+    api?: string
+    method?: string
+    params?: Record<string, string>
+    data?: any
   }
   href?: string
   target?: string
@@ -89,6 +94,15 @@ export interface ViewAction {
     delay?: number
   }
   confirm?: ConfirmationConfig
+  tooltip?: string
+  condition?: string
+  items?: Array<{
+    label: string
+    icon?: string
+    color?: string
+    onClick?: any
+    condition?: string
+  }>
 }
 
 export interface ConfirmationConfig {
@@ -114,28 +128,113 @@ export interface WizardStep {
   actions: ViewAction[]
 }
 
+// **NEW: Interfaces para datatable**
+export interface DatatableColumn {
+  key: string
+  label: string
+  type: string
+  sortable?: boolean
+  searchable?: boolean
+  width?: number
+  minWidth?: number
+  align?: 'left' | 'center' | 'right'
+  sticky?: 'left' | 'right'
+  render?: {
+    type: 'text' | 'badge' | 'avatar' | 'link' | 'code' | 'mask' | 'datetime' | 'indicator' | 'actions'
+    mapping?: Record<string, { label: string; color: string; icon?: string }>
+    href?: string
+    mask?: string
+    format?: string
+    placeholder?: string
+  }
+}
+
+export interface DatatableFilter {
+  label: string
+  name: string
+  type: 'text' | 'select' | 'date' | 'number'
+  placeholder?: string
+  options?: Array<{ value: string; label: string; color?: string }>
+  debounce?: number
+  grid?: {
+    xs?: number
+    md?: number
+  }
+}
+
 export interface ViewDefinition {
   id: string
   title: string
   alias?: string
   code?: string
-  type: 'form' | 'list' | 'detail' | 'dashboard' | 'wizard'
+  type: 'form' | 'list' | 'detail' | 'dashboard' | 'wizard' | 'datatable'
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   apiSubmit?: string
   apiData?: string
   apiValidation?: string
   apiSearch?: string
   apiDelete?: string
+  apiExport?: string
+  apiBatch?: string
   auth: boolean
   fields: ViewField[]
   actions?: ViewAction[]
   steps?: WizardStep[]
+  
+  // **NEW: Propriedades específicas do datatable**
+  filters?: DatatableFilter[]
+  columns?: DatatableColumn[]
+  rowActions?: ViewAction[]
+  bulkActions?: ViewAction[]
+  pagination?: {
+    enabled: boolean
+    pageSize: number
+    pageSizeOptions: number[]
+    showTotal?: boolean
+    showQuickJumper?: boolean
+  }
+  sorting?: {
+    enabled: boolean
+    multiple?: boolean
+    defaultSort?: {
+      column: string
+      direction: 'asc' | 'desc'
+    }
+  }
+  selection?: {
+    enabled: boolean
+    type: 'checkbox' | 'radio'
+    selectAll?: boolean
+    preserveSelection?: boolean
+  }
+  export?: {
+    enabled: boolean
+    formats: string[]
+    filename: string
+    api: string
+  }
+  refresh?: {
+    enabled: boolean
+    interval?: number
+    showButton?: boolean
+  }
+  emptyState?: {
+    title: string
+    description: string
+    icon: string
+    actions: ViewAction[]
+  }
+  
   layout?: {
     type?: 'grid' | 'flex' | 'stack'
     columns?: number
     gap?: number
     responsive?: boolean
     spacing?: 'small' | 'medium' | 'large'
+    showFilters?: boolean
+    showSearch?: boolean
+    showExport?: boolean
+    showRefresh?: boolean
   }
   theme?: {
     primaryColor?: string
@@ -162,6 +261,12 @@ export interface ViewDefinition {
     showProgress?: boolean
     confirmBeforeLeave?: boolean
     resetAfterSubmit?: boolean
+    autoRefresh?: boolean
+    preserveFilters?: boolean
+    rememberPageSize?: boolean
+    rememberSort?: boolean
+    stickyHeader?: boolean
+    virtualScrolling?: boolean
   }
   notifications?: {
     success?: NotificationConfig
@@ -186,7 +291,6 @@ export interface SearchResult {
   [key: string]: any
 }
 
-// Nova interface para resposta de busca de usuários
 export interface UserSearchResponse {
   success: boolean
   data: {

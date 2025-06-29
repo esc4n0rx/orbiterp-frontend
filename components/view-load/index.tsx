@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, ArrowLeft, FileText, Zap } from "lucide-react"
+import { AlertCircle, ArrowLeft, FileText, Zap, Table } from "lucide-react"
 import FieldRenderer from "./field-renderer"
 import ActionRenderer from "./action-renderer"
 import FormHandler from "./form-handler"
 import WizardRenderer from "./wizard-renderer"
+import DatatableRenderer from "./datatable-renderer"
 import { cn } from "@/lib/utils"
 import type { ViewDefinition } from "@/lib/types/views"
 import { Button } from "@/components/ui/button"
@@ -18,7 +19,7 @@ import { Button } from "@/components/ui/button"
 interface ViewLoadProps {
   viewId?: string
   alias?: string
-  identifier?: string // Novo: aceita qualquer identificador
+  identifier?: string
   className?: string
   onSuccess?: (data: any) => void
   onError?: (error: string) => void
@@ -46,7 +47,6 @@ export default function ViewLoad({
         let loadedView: ViewDefinition | null = null
         
         if (identifier) {
-          // Usa o método inteligente que tenta ID e alias
           console.log('Carregando view com identifier:', identifier)
           loadedView = await findView(identifier)
         } else if (viewId) {
@@ -95,6 +95,8 @@ export default function ViewLoad({
         return <Zap className="h-5 w-5" />
       case 'form':
         return <FileText className="h-5 w-5" />
+      case 'datatable':
+        return <Table className="h-5 w-5" />
       default:
         return <FileText className="h-5 w-5" />
     }
@@ -108,6 +110,8 @@ export default function ViewLoad({
         return <Badge variant="secondary">Formulário</Badge>
       case 'list':
         return <Badge variant="outline">Lista</Badge>
+      case 'datatable':
+        return <Badge variant="default" className="bg-green-600">Tabela</Badge>
       case 'dashboard':
         return <Badge variant="default" className="bg-blue-600">Dashboard</Badge>
       default:
@@ -220,6 +224,12 @@ export default function ViewLoad({
       {/* Content based on view type */}
       {view.type === 'wizard' ? (
         <WizardRenderer
+          view={view}
+          onSuccess={handleSuccess}
+          onError={handleError}
+        />
+      ) : view.type === 'datatable' ? (
+        <DatatableRenderer
           view={view}
           onSuccess={handleSuccess}
           onError={handleError}

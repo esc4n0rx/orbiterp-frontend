@@ -48,7 +48,7 @@ interface Tab {
   title: string
   viewId?: string
   alias?: string
-  identifier?: string // Para armazenar o identificador original
+  identifier?: string
   isActive: boolean
   type: 'home' | 'view' | 'module'
   moduleName?: string
@@ -56,6 +56,8 @@ interface Tab {
 
 const quickAccessViews = [
   { id: "v-usuario-registro", alias: "us01", title: "Cadastro", icon: Users },
+  { id: "v-usuario-edicao", alias: "us02", title: "Edição", icon: Users },
+  { id: "v-usuario-lista", alias: "us03", title: "Lista", icon: Users },
   { id: "inventory-control", title: "Estoque", icon: Package },
   { id: "hr-management", title: "RH", icon: Users },
   { id: "sales-dashboard", title: "Vendas", icon: FileText },
@@ -93,7 +95,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     console.log('Buscando:', query)
 
     try {
-      // Usar o método findView que tenta tanto ID quanto alias
       const { findView } = useViewsStore.getState()
       const view = await findView(query)
       
@@ -105,7 +106,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           'view',
           view.alias,
           undefined,
-          query // identifier original
+          query
         )
         toast({
           title: "Sucesso",
@@ -142,7 +143,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     )
 
     if (existingTab) {
-      // Switch to existing tab
       setTabs(
         tabs.map((tab) => ({
           ...tab,
@@ -176,7 +176,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   }
 
   const closeTab = (tabId: string) => {
-    if (tabs.length === 1) return // Don't close the last tab
+    if (tabs.length === 1) return
 
     const tabIndex = tabs.findIndex((tab) => tab.id === tabId)
     const isActiveTab = tabs[tabIndex].isActive
@@ -184,7 +184,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     const newTabs = tabs.filter((tab) => tab.id !== tabId)
 
     if (isActiveTab && newTabs.length > 0) {
-      // Activate the previous tab or the first one
       const newActiveIndex = Math.max(0, tabIndex - 1)
       newTabs[newActiveIndex].isActive = true
     }
@@ -192,14 +191,23 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     setTabs(newTabs)
   }
 
+  // **FIX: Melhorar handleViewSelect para usar o identificador correto**
   const handleViewSelect = (viewId: string, title: string, alias?: string) => {
-    openNewTab(viewId, title, 'view', alias, undefined, viewId)
+    console.log('handleViewSelect chamado:', { viewId, title, alias })
+    
+    // Usar alias se disponível, senão usar viewId
+    const identifier = alias || viewId
+    
+    openNewTab(identifier, title, 'view', alias, undefined, identifier)
   }
 
+  // **FIX: Corrigir handleModuleSelect para abrir detalhes do módulo**
   const handleModuleSelect = (module: any) => {
+    console.log('handleModuleSelect chamado:', module)
+    
     openNewTab(
       `module-${module.name}`, 
-      module.title, 
+      `${module.title} - Módulo`, 
       'module',
       undefined,
       module.name
@@ -231,7 +239,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   const activeTab = tabs.find((tab) => tab.isActive)
 
-  // Prevent hydration mismatch
   if (!mounted) {
     return null
   }

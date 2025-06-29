@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -29,6 +29,7 @@ export default function WizardRenderer({ view, onSuccess, onError }: WizardRende
   const [isSearching, setIsSearching] = useState(false)
   const [searchFormData, setSearchFormData] = useState<Record<string, any>>({})
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [editFormData, setEditFormData] = useState<Record<string, any>>({})
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
     config: ConfirmationConfig
@@ -144,7 +145,13 @@ export default function WizardRenderer({ view, onSuccess, onError }: WizardRende
       const response = await viewsService.fetchData(apiUrl)
       
       if (response.success) {
+        console.log('Dados do usuário carregados:', response.data)
         setSelectedUser(response.data)
+        
+        // **FIX: Inicializar o formulário de edição com os dados do usuário**
+        const userData = response.data.user || response.data
+        setEditFormData(userData)
+        
         nextStep()
       } else {
         throw new Error('Erro ao carregar dados do usuário')
@@ -370,7 +377,7 @@ export default function WizardRenderer({ view, onSuccess, onError }: WizardRende
               )}
             </div>
           ) : (
-            /* Edit Step - mantido igual */
+            /* Edit Step - **FIX: usar editFormData com inicialização correta** */
             selectedUser && (
               <FormHandler
                 fields={view.fields.filter(f => getAllStepFields(currentStep).includes(f.name))}
@@ -381,14 +388,18 @@ export default function WizardRenderer({ view, onSuccess, onError }: WizardRende
                 onError={onError}
               >
                 {({ formData, errors, isSubmitting, submitSuccess, submitMessage, handleFieldChange, handleSubmit, handleFieldEvent, resetForm }) => {
-                  // Initialize form with selected user data
-                  React.useEffect(() => {
-                    if (selectedUser && Object.keys(formData).length === 0) {
-                      Object.entries(selectedUser).forEach(([key, value]) => {
-                        handleFieldChange(key, value)
+                  // **FIX: Inicializar formulário com dados do usuário quando carregado**
+                  useEffect(() => {
+                    if (selectedUser && editFormData && Object.keys(editFormData).length > 0) {
+                      console.log('Inicializando formulário com dados:', editFormData)
+                      Object.entries(editFormData).forEach(([key, value]) => {
+                        // Só definir se o campo ainda não foi alterado pelo usuário
+                        if (formData[key] === undefined || formData[key] === '') {
+                          handleFieldChange(key, value)
+                        }
                       })
                     }
-                  }, [selectedUser, formData, handleFieldChange])
+                  }, [selectedUser, editFormData, handleFieldChange])
 
                   return (
                     <form onSubmit={(e) => {

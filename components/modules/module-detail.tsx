@@ -62,14 +62,17 @@ export default function ModuleDetail({ moduleName, onBack, onViewSelect }: Modul
       setError(null)
       
       try {
+        console.log('Carregando detalhes do módulo:', moduleName)
         const response = await modulesService.getModule(moduleName)
         
         if (response.success) {
+          console.log('Dados do módulo carregados:', response.data)
           setData(response.data)
         } else {
           throw new Error('Módulo não encontrado')
         }
       } catch (err: any) {
+        console.error('Erro ao carregar módulo:', err)
         setError(err.message || 'Erro ao carregar detalhes do módulo')
       } finally {
         setIsLoading(false)
@@ -78,6 +81,17 @@ export default function ModuleDetail({ moduleName, onBack, onViewSelect }: Modul
 
     loadModuleDetail()
   }, [moduleName])
+
+  // **FIX: Função para lidar com seleção de view melhorada**
+  const handleViewSelect = (viewId: string, title: string, alias?: string) => {
+    console.log('View selecionada:', { viewId, title, alias })
+    
+    // Determinar o identificador correto para usar
+    const identifier = alias || viewId
+    
+    // Chamar a função de callback do pai
+    onViewSelect(identifier, title, alias)
+  }
 
   if (isLoading) {
     return (
@@ -115,7 +129,7 @@ export default function ModuleDetail({ moduleName, onBack, onViewSelect }: Modul
             <Skeleton className="h-6 w-32" />
           </CardHeader>
           <CardContent>
-            <ViewList views={[]} onViewSelect={onViewSelect} isLoading={true} />
+            <ViewList views={[]} onViewSelect={handleViewSelect} isLoading={true} />
           </CardContent>
         </Card>
       </div>
@@ -232,7 +246,7 @@ export default function ModuleDetail({ moduleName, onBack, onViewSelect }: Modul
         <CardContent>
           <ViewList 
             views={views} 
-            onViewSelect={onViewSelect}
+            onViewSelect={handleViewSelect}
             isLoading={false}
           />
         </CardContent>
